@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+let VERSION = "1.1.0"
+
 // hello
 @main
 struct Tally_CounterApp: App {

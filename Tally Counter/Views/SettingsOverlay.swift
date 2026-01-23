@@ -270,7 +270,7 @@ struct SettingsOverlay: View {
                     .frame(height: 2)
                     .background(Color.white.opacity(0.6))
 
-                Text("v1.0.0\nDeveloped by Dmitrijs Lasko | 2026\nUI by Anastasiya Badun")
+                Text("v"+VERSION+"\nDeveloped by Dmitrijs Lasko | 2026\nUI by Anastasiya Badun")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
