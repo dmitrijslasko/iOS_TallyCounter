@@ -28,9 +28,9 @@ struct ContentView: View {
         if count > 999999 {
             return 60
         } else if count > 99999 {
-            return 68
+            return 73
         } else if count > 9999 {
-            return 80
+            return 82
         } else if count > 999 {
             return 95
         } else if count > 99 {
@@ -121,97 +121,71 @@ struct ContentView: View {
     }
 
     private var counterView: some View {
-        Text(count, format: .number.grouping(.never))
-            .font(.system(size: fontSize, weight: .bold, design: counterFontValue.design))
-            .blur(radius: isAnimating ? 8 : 0)
-            .foregroundStyle(counterColorValue)
-            .frame(width: 320, height: 320)
-            .background(
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                counterColorValue.opacity(0.25),
-                                counterColorValue.opacity(0.15),
-                                counterColorValue.opacity(0.05)
-                            ],
-                            center: .center,
-                            startRadius: 115,
-                            endRadius: 150
-                        )
-                    )
-            )
-            .overlay(
-                Circle()
-                    .stroke(counterColorValue, lineWidth: 25)
-            )
-            .scaleEffect(isAnimating ? 1.2 : 1.0)
-            .opacity(isAnimating ? 0.6 : 1.0)
-            .scaleEffect(isLongPressing ? 0.9 : 1.0)
-        
-            // single tap
-            .onTapGesture {
-                if settings.hapticsEnabled {
-                    let generator = UIImpactFeedbackGenerator(style: hapticStrengthValue.style)
-                    generator.prepare()
-                    generator.impactOccurred()
-                }
+        CounterDial(
+            count: count,
+            fontSize: fontSize,
+            counterFontDesign: counterFontValue.design,
+            color: counterColorValue,
+            isAnimating: isAnimating,
+            isLongPressing: isLongPressing
+        )
+        // single tap
+        .onTapGesture {
+            if settings.hapticsEnabled {
+                let generator = UIImpactFeedbackGenerator(style: hapticStrengthValue.style)
+                generator.prepare()
+                generator.impactOccurred()
+            }
 
-                AudioServicesPlaySystemSound(tapSoundValue.systemSoundID)
-                applyCountChange(settings.tapDecrements ? -settings.stepSize : settings.stepSize)
+            AudioServicesPlaySystemSound(tapSoundValue.systemSoundID)
+            applyCountChange(settings.tapDecrements ? -settings.stepSize : settings.stepSize)
 
-                withAnimation(.easeOut(duration: 0.2)) {
-                    isAnimating = true
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    withAnimation(.easeIn(duration: 0.2)) {
-                        isAnimating = false
-                    }
+            withAnimation(.easeOut(duration: 0.2)) {
+                isAnimating = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation(.easeIn(duration: 0.2)) {
+                    isAnimating = false
                 }
             }
-        
-            // long press
-            .onLongPressGesture(
-                minimumDuration: 1,
-                maximumDistance: 50,
-                pressing: { pressing in
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isLongPressing = pressing
-                    }
-                },
-                perform: {
-                    AudioServicesPlaySystemSound(1105)
-                    count = 0
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        isLongPressing = false
+        }
+        // long press
+        .onLongPressGesture(
+            minimumDuration: 1,
+            maximumDistance: 50,
+            pressing: { pressing in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isLongPressing = pressing
+                }
+            },
+            perform: {
+                AudioServicesPlaySystemSound(1105)
+                count = 0
+                withAnimation(.easeOut(duration: 0.2)) {
+                    isLongPressing = false
+                }
+            }
+        )
+        // swipe up/down
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 20)
+                .onEnded { value in
+                    let dx = value.predictedEndTranslation.width
+                    let dy = value.predictedEndTranslation.height
+                    let isMostlyVertical = abs(dy) > abs(dx) * 1.2
+                    guard isMostlyVertical else { return }
+
+                    if dy > 40 {
+                        selectionHaptic()
+                        applyCountChange(-settings.stepSize)
+                    } else if dy < -40 {
+                        selectionHaptic()
+                        applyCountChange(settings.stepSize)
                     }
                 }
-            )
-        
-            // DRAG UP      → increment
-            // DRAG DOWN    → decrement
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 20)
-                    .onEnded { value in
-                        // Use predicted end for “swipe” feel (captures fast flicks)
-                        let dx = value.predictedEndTranslation.width
-                        let dy = value.predictedEndTranslation.height
-                        // Vertical dominance check (more forgiving than abs(width) < 40)
-                        let isMostlyVertical = abs(dy) > abs(dx) * 1.2
-
-                        guard isMostlyVertical else { return }
-
-                        if dy > 40 {
-                            selectionHaptic()
-                            applyCountChange(-settings.stepSize)     // swipe down
-                            
-                        } else if dy < -40 {
-                            selectionHaptic()
-                            applyCountChange(settings.stepSize)     // swipe up
-                        }
-                    }
-            )
+        )
     }
+
 
     private func applyCountChange(_ delta: Int) {
         let previous = count
